@@ -38,8 +38,8 @@ pip install fastapi uvicorn yt-dlp aiosqlite bcrypt python-jose[cryptography] au
 ```env
 # AI API 설정
 openwebui=YOUR_API_KEY
-llm_url=https://chat.ai-dream.org/api/chat/completions
-model_name=summerizer
+llm_url=https://YOURDOMAIN/api/chat/completions
+model_name=LLM_MODEL_NAME
 
 # 관리자 계정 설정
 ADMIN_ID=
