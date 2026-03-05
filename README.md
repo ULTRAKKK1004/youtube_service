@@ -42,8 +42,8 @@ llm_url=https://chat.ai-dream.org/api/chat/completions
 model_name=summerizer
 
 # 관리자 계정 설정
-ADMIN_ID=yanus
-ADMIN_PASSWORD=Yanu1004!
+ADMIN_ID=
+ADMIN_PASSWORD=
 
 # 보안 설정
 SECRET_KEY=your_random_secret_key_here
