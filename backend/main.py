@@ -134,17 +134,18 @@ async def auth_google(request: Request):
         resp = await client.get(f"https://www.googleapis.com/oauth2/v3/tokeninfo?id_token={data.get('token')}")
         user_info = resp.json()
     if user_info.get("aud") != GOOGLE_CLIENT_ID: raise HTTPException(status_code=400, detail="오류")
-    email = user_info.get("email")
+    email, name, pic = user_info.get("email"), user_info.get("name"), user_info.get("picture")
+
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute("SELECT * FROM users WHERE email = ?", (email,)) as cursor:
             user = await cursor.fetchone()
             if not user:
-                await db.execute("INSERT INTO users (email, name, profile_pic, google_id, created_at) VALUES (?, ?, ?, ?, ?)", (email, user_info.get("name"), user_info.get("picture"), user_info.get("sub"), datetime.datetime.now()))
+                await db.execute("INSERT INTO users (email, name, profile_pic, google_id, created_at) VALUES (?, ?, ?, ?, ?)", (email, name, pic,user_info.get("sub"), datetime.datetime.now()))
                 await db.commit()
                 async with db.execute("SELECT * FROM users WHERE email = ?", (email,)) as cursor2: user = await cursor2.fetchone()
     # picture 필드명을 확실히 picture로 내려줌
-    return {"access_token": create_access_token(data={"sub": email}), "user": {"name": user["name"], "email": user["email"], "picture": user["profile_pic"], "level": user["level"]}}
+    return {"access_token": create_access_token(data={"sub": email}), "user": {"name": user["name"], "email": user["email"], "picture": user["pic"], "level": user["level"]}}
 
 @app.get("/admin/users")
 async def admin_users(admin=Depends(get_current_admin)):
