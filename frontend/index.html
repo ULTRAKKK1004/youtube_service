@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube AI 요약기</title>
+    <!-- 파비콘 고정 -->
+    <link rel="icon" type="image/x-icon" href="https://www.google.com/s2/favicons?domain=youtube.com&sz=64">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
@@ -36,8 +38,8 @@
         }
         
         .user-menu { display: flex; gap: 10px; align-items: center; }
-        .user-profile { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); padding: 5px 15px; border-radius: 50px; }
-        .user-profile img { width: 28px; height: 32px; border-radius: 50%; border: 2px solid var(--accent); }
+        .user-profile { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); padding: 5px 15px; border-radius: 50px; border: 1px solid var(--border); }
+        .user-profile img { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; display: block; background: #334155; }
         .user-name { font-weight: 600; color: var(--accent); }
 
         .auth-modal {
@@ -68,7 +70,6 @@
         
         .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; display: none; }
         
-        /* 모바일 레이아웃 최적화 */
         @media (max-width: 900px) { 
             .main-content { grid-template-columns: 1fr; }
             .left-col { order: 1; display: flex; flex-direction: column; }
@@ -86,7 +87,7 @@
         .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; }
         
         .transcript-container { margin-top: 1rem; max-height: 400px; overflow-y: auto; display: none; white-space: pre-wrap; background: #0f172a; padding: 1rem; }
-        .download-list { margin-top: 1rem; max-height: 300px; overflow-y: auto; display: none; /* 기본 접힘 */ }
+        .download-list { margin-top: 1rem; max-height: 300px; overflow-y: auto; display: none; }
         
         #status-area { text-align: center; padding: 1rem; display: none; }
         .loader { border: 4px solid rgba(239, 68, 68, 0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: inline-block; }
@@ -101,12 +102,10 @@
         .admin-sidebar button.active { background: var(--accent); color: white; border-color: var(--accent); }
         .admin-content { flex: 1; padding: 2rem; overflow-y: auto; background: #0f172a; }
         .admin-table { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: 10px; overflow: hidden; }
-        .admin-table th, .admin-table td { border-bottom: 1px solid var(--border); padding: 12px 15px; text-align: left; font-size: 0.9rem; }
+        .admin-table th, .admin-table td { border-bottom: 1px solid var(--border); padding: 12px 15px; text-align: left; font-size: 0.85rem; }
         .admin-table th { background: #1e293b; color: var(--accent); font-weight: 600; }
         
-        /* Download UI */
         .download-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-        .download-item:last-child { border-bottom: none; }
         .btn-sm { padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; border: none; background: var(--success); color: white; }
         .btn-toggle { background: #334155; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; }
     </style>
@@ -127,8 +126,17 @@
                 <input type="password" id="auth-password" placeholder="비밀번호">
                 <button class="auth-btn" onclick="handleAuth()">확인</button>
                 <div style="margin: 1.5rem 0; position: relative; text-align: center;"><hr style="border: 0; border-top: 1px solid var(--border);"><span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--card-bg); padding: 0 10px; font-size: 0.8rem; color: var(--text-dim);">OR</span></div>
-                <div id="g_id_onload" data-client_id="818619054130-32i1a8vcj21gc1i33mhrnsu84gnvm6h0.apps.googleusercontent.com" data-callback="handleGoogleLogin"></div>
-                <div class="g_id_signin" data-type="standard" data-width="320"></div>
+                
+                <!-- 구글 버튼 영역 -->
+                <div id="google-login-btn-container">
+                    <div id="g_id_onload" 
+                         data-client_id="818619054130-32i1a8vcj21gc1i33mhrnsu84gnvm6h0.apps.googleusercontent.com" 
+                         data-callback="handleGoogleLogin"
+                         data-auto_prompt="false">
+                    </div>
+                    <div class="g_id_signin" data-type="standard" data-width="320"></div>
+                </div>
+
                 <p class="switch-auth" id="auth-switch" onclick="switchAuth()">계정이 없으신가요? 회원가입</p>
                 <p class="switch-auth" onclick="closeAuth()" style="color: var(--danger);">닫기</p>
             </div>
@@ -158,18 +166,11 @@
             <div class="left-col">
                 <div class="video-player-container" id="video-container"></div>
                 <div class="card" id="transcript-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="margin:0; font-size: 1.2rem;">📝 자막 전문</h2>
-                        <button onclick="toggleCard('transcript-view', 'toggle-btn-sub')" id="toggle-btn-sub" class="btn-toggle">펼치기</button>
-                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;"><h2 style="margin:0; font-size: 1.2rem;">📝 자막 전문</h2><button onclick="toggleCard('transcript-view', 'toggle-btn-sub')" id="toggle-btn-sub" class="btn-toggle">펼치기</button></div>
                     <div id="transcript-view" class="transcript-container"></div>
                 </div>
-                <!-- 다운로드 카드 -->
                 <div class="card" id="download-card" style="display: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="margin:0; font-size: 1.2rem;">📥 다운로드 옵션</h2>
-                        <button onclick="toggleCard('download-list', 'toggle-btn-dl')" id="toggle-btn-dl" class="btn-toggle">펼치기</button>
-                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;"><h2 style="margin:0; font-size: 1.2rem;">📥 다운로드 옵션</h2><button onclick="toggleCard('download-list', 'toggle-btn-dl')" id="toggle-btn-dl" class="btn-toggle">펼치기</button></div>
                     <div id="download-list" class="download-list"></div>
                 </div>
             </div>
@@ -197,8 +198,23 @@
             const user = JSON.parse(localStorage.getItem('user'));
             const menu = document.getElementById('user-menu');
             if (user) {
+                // 로그인 상태면 구글 버튼 영역 삭제 (팝업 방지)
+                const gBtn = document.getElementById('google-login-btn-container');
+                if(gBtn) gBtn.innerHTML = '';
+
                 let adminBtn = user.level === 'admin' ? `<button onclick="openAdmin()" style="background:var(--success); color:white; border:none; padding: 5px 15px; border-radius: 5px; cursor:pointer; font-weight:600; margin-left:10px;">관리자</button>` : '';
-                menu.innerHTML = `<div class="user-profile">${user.picture ? `<img src="${user.picture}">` : '<div style="width:28px; height:28px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px;">👤</div>'}<span class="user-name">${user.name}님</span>${adminBtn}<button onclick="logout()" style="background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:0.85rem; margin-left:10px;">로그아웃</button></div>`;
+                
+                // 데이터 필드명 picture와 profile_pic 모두 지원 및 no-referrer 정책
+                const picUrl = user.picture || user.profile_pic;
+                
+                menu.innerHTML = `
+                    <div class="user-profile">
+                        ${picUrl ? `<img src="${picUrl}" referrerpolicy="no-referrer" style="width:32px; height:32px; border-radius:50%; object-fit:cover;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random'">` : '<div style="width:32px; height:32px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px;">👤</div>'}
+                        <span class="user-name">${user.name}님</span>
+                        ${adminBtn}
+                        <button onclick="logout()" style="background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:0.85rem; margin-left:10px;">로그아웃</button>
+                    </div>
+                `;
             } else {
                 menu.innerHTML = `<button onclick="openAuth('login')" style="background:transparent; color:white; border:none; cursor:pointer;">로그인</button><button onclick="openAuth('register')" style="background:var(--accent); color:white; border:none; padding: 5px 15px; border-radius: 5px; cursor:pointer; font-weight:600;">회원가입</button>`;
             }
@@ -242,7 +258,11 @@
                     body: JSON.stringify({ token: response.credential })
                 });
                 const data = await resp.json();
-                if (resp.ok) { localStorage.setItem('token', data.access_token); localStorage.setItem('user', JSON.stringify(data.user)); location.reload(); }
+                if (resp.ok) { 
+                    localStorage.setItem('token', data.access_token); 
+                    localStorage.setItem('user', JSON.stringify(data.user)); 
+                    location.reload(); 
+                }
             } catch (e) { alert("연결 오류"); }
         }
 
@@ -260,13 +280,31 @@
             content.innerHTML = '로딩 중...';
             if (tab === 'users') {
                 const data = await fetchAdminData('/admin/users');
-                let html = '<h2>👥 회원 관리</h2><table class="admin-table"><tr><th>ID</th><th>이메일</th><th>레벨</th></tr>';
-                data.forEach(u => html += `<tr><td>${u.name}</td><td>${u.email}</td><td><select onchange="updateUserLevel('${u.email}', this.value)"><option value="admin" ${u.level==='admin'?'selected':''}>관리자</option><option value="user2" ${u.level==='user2'?'selected':''}>일반2</option><option value="user" ${u.level==='user'?'selected':''}>일반</option><option value="pending" ${u.level==='pending'?'selected':''}>보류</option></select></td></tr>`);
+                let html = '<h2>👥 회원 관리</h2><table class="admin-table"><tr><th>ID</th><th>이름</th><th>이메일</th><th>레벨</th></tr>';
+                data.forEach(u => html += `<tr><td>${u.id}</td><td>${u.name}</td><td>${u.email}</td><td><select onchange="updateUserLevel('${u.email}', this.value)"><option value="admin" ${u.level==='admin'?'selected':''}>관리자</option><option value="user2" ${u.level==='user2'?'selected':''}>일반2</option><option value="user" ${u.level==='user'?'selected':''}>일반</option><option value="pending" ${u.level==='pending'?'selected':''}>보류</option></select></td></tr>`);
                 content.innerHTML = html + '</table>';
             } else if (tab === 'videos') {
                 const data = await fetchAdminData('/admin/videos');
-                let html = '<h2>🎥 비디오 DB</h2><table class="admin-table"><tr><th>제목</th><th>조회</th></tr>';
-                data.forEach(v => html += `<tr><td>${v.title}</td><td>${v.view_count}회</td></tr>`);
+                let html = '<h2>🎥 비디오 DB</h2><table class="admin-table"><tr><th style="width:100px;">링크</th><th style="width:150px;">제목</th><th>요약 내용</th><th style="width:120px;">사용자</th><th style="width:60px;">조회</th></tr>';
+                data.forEach(v => {
+                    html += `<tr>
+                        <td><a href="https://youtube.com/watch?v=${v.video_id}" target="_blank" style="color:var(--accent)">${v.video_id}</a></td>
+                        <td>${v.title}</td>
+                        <td><div style="max-height:100px; overflow-y:auto; font-size:0.75rem; white-space:pre-wrap; border:1px solid #334155; padding:8px; background:#0f172a; line-height:1.4;">${v.summary || '요약 데이터 없음'}</div></td>
+                        <td><small>${v.userId}</small></td>
+                        <td>${v.view_count}회</td>
+                    </tr>`;
+                });
+                content.innerHTML = html + '</table>';
+            } else if (tab === 'logs') {
+                const data = await fetchAdminData('/admin/logs');
+                let html = '<h2>📊 로그</h2><table class="admin-table"><tr><th>IP</th><th>경로</th><th>시간</th></tr>';
+                data.forEach(l => html += `<tr><td>${l.ip}</td><td>${l.endpoint}</td><td>${l.created_at}</td></tr>`);
+                content.innerHTML = html + '</table>';
+            } else if (tab === 'blocks') {
+                const data = await fetchAdminData('/admin/blocked_ips');
+                let html = '<h2>🛑 IP 차단</h2><table class="admin-table"><tr><th>IP</th><th>사유</th><th>관리</th></tr>';
+                data.forEach(b => html += `<tr><td>${b.ip}</td><td>${b.reason}</td><td><button onclick="unblockIp('${b.ip}')">해제</button></td></tr>`);
                 content.innerHTML = html + '</table>';
             }
         }
@@ -275,7 +313,6 @@
             alert("완료");
         }
 
-        // --- 카드 토글 ---
         function toggleCard(contentId, btnId) {
             const el = document.getElementById(contentId);
             const btn = document.getElementById(btnId);
@@ -284,24 +321,20 @@
             btn.innerText = isVisible ? '펼치기' : '접기';
         }
 
-        // --- 다운로드 ---
         async function loadDownloadOptions(url) {
             const card = document.getElementById('download-card');
             const list = document.getElementById('download-list');
             const btn = document.getElementById('toggle-btn-dl');
             list.innerHTML = '포맷 정보를 불러오는 중...';
             card.style.display = 'block';
-            
-            // 초기화: 접힌 상태로 유지
             list.style.display = 'none';
             btn.innerText = '펼치기';
-
             try {
                 const resp = await fetch(`${API_BASE}/video-formats?url=${encodeURIComponent(url)}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
                 const data = await resp.json();
                 if (resp.ok) {
                     let html = '';
-                    data.formats.slice(0, 15).forEach(f => {
+                    data.formats.forEach(f => {
                         html += `<div class="download-item"><span>[${f.type.toUpperCase()}] ${f.resolution} (${f.ext}) ${f.note}</span><button class="btn-sm" onclick="downloadFile('${url}', '${f.format_id}')">다운로드</button></div>`;
                     });
                     list.innerHTML = html;
@@ -317,14 +350,12 @@
             try {
                 const response = await fetch(`${API_BASE}/download-file?url=${encodeURIComponent(url)}&format_id=${format_id}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
                 if (!response.ok) throw new Error("실패");
-                
                 const contentDisposition = response.headers.get('Content-Disposition');
                 let filename = "download.mp4";
                 if (contentDisposition) {
                     const match = contentDisposition.match(/filename\*=UTF-8''(.+)/);
                     if (match) filename = decodeURIComponent(match[1]);
                 }
-
                 const reader = response.body.getReader();
                 const chunks = [];
                 let receivedLength = 0;
@@ -343,7 +374,6 @@
             finally { setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 2000); }
         }
 
-        // --- 분석 시작 ---
         async function startAnalysis() {
             const url = document.getElementById('url-input').value.trim();
             if (!url) return;
@@ -351,14 +381,12 @@
             document.getElementById('download-card').style.display = 'none';
             document.getElementById('status-area').style.display = 'block';
             document.getElementById('status-area').innerHTML = '<div class="loader"></div> <span id="status-text">시작 중...</span>';
-
             try {
                 const response = await fetch(`${API_BASE}/smart-subtitles`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify({ url }) });
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = ""; let accumulatedSummary = "";
                 document.getElementById('result-area').style.display = 'grid';
-
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;

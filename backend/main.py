@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- 1. 모델 정의 (최상단) ---
+# --- 1. 모델 정의 ---
 class VideoRequest(BaseModel): url: str
 class UserRegister(BaseModel): email: str; password: str; name: str
 class UserLogin(BaseModel): email: str; password: str
@@ -87,6 +87,8 @@ async def startup_event():
         if 'level' not in [r[1] for r in await cursor.fetchall()]: await db.execute("ALTER TABLE users ADD COLUMN level TEXT DEFAULT 'user'")
         await db.execute("CREATE TABLE IF NOT EXISTS access_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, ip TEXT, endpoint TEXT, method TEXT, created_at TIMESTAMP)")
         await db.execute("CREATE TABLE IF NOT EXISTS ip_blocks (id INTEGER PRIMARY KEY AUTOINCREMENT, ip TEXT UNIQUE, reason TEXT, created_at TIMESTAMP)")
+        
+        # 관리자 계정 생성 기본값 (hi_man / itispassword)
         admin_id = os.getenv("ADMIN_ID", "hi_man")
         async with db.execute("SELECT id FROM users WHERE email = ?", (admin_id,)) as cursor:
             if not await cursor.fetchone():
@@ -123,7 +125,7 @@ async def login(user: UserLogin):
         async with db.execute("SELECT * FROM users WHERE email = ?", (user.email,)) as cursor:
             u = await cursor.fetchone()
             if not u or not verify_password(user.password, u["hashed_password"]): raise HTTPException(status_code=400, detail="불일치")
-            return {"access_token": create_access_token(data={"sub": u["email"]}), "user": {"name": u["name"], "email": u["email"], "level": u["level"]}}
+            return {"access_token": create_access_token(data={"sub": u["email"]}), "user": {"name": u["name"], "email": u["email"], "picture": u["profile_pic"], "level": u["level"]}}
 
 @app.post("/auth/google")
 async def auth_google(request: Request):
@@ -141,7 +143,8 @@ async def auth_google(request: Request):
                 await db.execute("INSERT INTO users (email, name, profile_pic, google_id, created_at) VALUES (?, ?, ?, ?, ?)", (email, user_info.get("name"), user_info.get("picture"), user_info.get("sub"), datetime.datetime.now()))
                 await db.commit()
                 async with db.execute("SELECT * FROM users WHERE email = ?", (email,)) as cursor2: user = await cursor2.fetchone()
-    return {"access_token": create_access_token(data={"sub": email}), "user": {"name": user["name"], "email": user["email"], "level": user["level"]}}
+    # picture 필드명을 확실히 picture로 내려줌
+    return {"access_token": create_access_token(data={"sub": email}), "user": {"name": user["name"], "email": user["email"], "picture": user["profile_pic"], "level": user["level"]}}
 
 @app.get("/admin/users")
 async def admin_users(admin=Depends(get_current_admin)):
@@ -160,7 +163,8 @@ async def admin_update_level(req: UserLevelRequest, admin=Depends(get_current_ad
 async def admin_videos(admin=Depends(get_current_admin)):
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
-        async with db.execute("SELECT id, video_id, title, userId, view_count, created_at FROM video_cache ORDER BY id DESC") as cursor: return [dict(r) for r in await cursor.fetchall()]
+        async with db.execute("SELECT id, video_id, title, summary, userId, view_count, created_at FROM video_cache ORDER BY id DESC") as cursor: 
+            return [dict(r) for r in await cursor.fetchall()]
 
 # --- 6. 다운로드 및 포맷 리스트 ---
 @app.get("/video-formats")
@@ -184,7 +188,6 @@ async def download_file(url: str, format_id: str, user=Depends(get_privileged_us
         ydl_opts = {'format': format_id, 'outtmpl': f'{temp_dir}/d.%(ext)s', 'quiet': True}
         if is_mp3: ydl_opts.update({'postprocessors': [{'key': 'FFmpegExtractAudio','preferredcodec': 'mp3','preferredquality': '192'}]})
         elif "bestvideo" in format_id: ydl_opts.update({'merge_output_format': 'mp4'})
-        
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             title = re.sub(r'[\\/*?:"<>|]', '', info.get('title'))
