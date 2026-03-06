@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: youtube-ai-backend
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./backend/.env:/app/.env
+      - ./backend/youtube_cache.db:/app/youtube_cache.db
+    restart: always
+
+  frontend:
+    build: ./frontend
+    container_name: youtube-ai-frontend
+    ports:
+      - "8000:80"
+    restart: always

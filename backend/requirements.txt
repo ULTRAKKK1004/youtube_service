@@ -1,4 +1,10 @@
 fastapi
 uvicorn
 yt-dlp
-pydantic
+aiosqlite
+bcrypt
+python-jose[cryptography]
+authlib
+httpx
+python-dotenv
+python-multipart
