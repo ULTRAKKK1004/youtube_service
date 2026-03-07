@@ -3,408 +3,252 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube AI 요약기</title>
-    <!-- 파비콘 고정 -->
+    <title>Bulletin Board for AI</title>
     <link rel="icon" type="image/x-icon" href="https://www.google.com/s2/favicons?domain=youtube.com&sz=64">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --accent: #ef4444;
-            --accent-hover: #dc2626;
-            --text-main: #f1f5f9;
-            --text-dim: #94a3b8;
-            --danger: #f43f5e;
-            --success: #10b981;
-            --border: #334155;
+            --bg-color: #0f172a; --card-bg: #1e293b; --accent: #ef4444; --accent-hover: #dc2626;
+            --text-main: #f1f5f9; --text-dim: #94a3b8; --danger: #f43f5e; --success: #10b981; --border: #334155;
         }
-
         * { box-sizing: border-box; transition: all 0.2s ease; }
-        body { 
-            background-color: var(--bg-color); 
-            color: var(--text-main);
-            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
-            margin: 0; padding: 20px;
-            display: flex; flex-direction: column; align-items: center;
-        }
-
-        .container { width: 100%; max-width: 1200px; }
-        header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 2.5rem; width: 100%; padding: 10px 0;
-            border-bottom: 1px solid var(--border);
-        }
-        
-        .user-menu { display: flex; gap: 10px; align-items: center; }
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: 'Pretendard', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .container { width: 100%; max-width: 1400px; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; width: 100%; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .nav-tabs { display: flex; gap: 20px; margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 10px; width: 100%; }
+        .nav-tab { cursor: pointer; color: var(--text-dim); font-weight: 600; padding: 5px 10px; font-size: 1.1rem; }
+        .nav-tab.active { color: var(--accent); border-bottom: 3px solid var(--accent); }
         .user-profile { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); padding: 5px 15px; border-radius: 50px; border: 1px solid var(--border); }
-        .user-profile img { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; display: block; background: #334155; }
-        .user-name { font-weight: 600; color: var(--accent); }
-
-        .auth-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center;
-            z-index: 1000; backdrop-filter: blur(5px);
-        }
-        .modal-content {
-            background: var(--card-bg); padding: 2.5rem; border-radius: 1.5rem;
-            width: 100%; max-width: 400px; border: 1px solid var(--border);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-        .modal-content h3 { margin-top: 0; margin-bottom: 1.5rem; text-align: center; font-size: 1.5rem; }
-        .modal-content input {
-            width: 100%; padding: 0.85rem; margin-bottom: 1rem;
-            background: #0f172a; border: 1px solid var(--border); border-radius: 0.75rem; color: white;
-            font-size: 1rem;
-        }
-        #auth-msg { padding: 10px; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-align: center; display: none; }
-        .msg-error { background: rgba(244, 63, 94, 0.1); color: var(--danger); border: 1px solid var(--danger); }
-        .msg-success { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid var(--success); }
-
-        .auth-btn { width: 100%; padding: 0.85rem; margin-bottom: 1rem; background: var(--accent); color: white; border: none; border-radius: 0.75rem; font-weight: 700; cursor: pointer; font-size: 1rem; }
-        .switch-auth { text-align: center; font-size: 0.9rem; color: var(--text-dim); cursor: pointer; margin-top: 1rem; }
-
-        .input-section { display: flex; gap: 12px; margin-bottom: 2.5rem; background: var(--card-bg); padding: 1.5rem; border-radius: 1rem; border: 1px solid var(--border); }
-        input[type="text"] { flex: 1; background: #0f172a; border: 1px solid var(--border); border-radius: 0.75rem; padding: 1rem; color: white; }
+        .btn-main { background: var(--accent); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer; font-weight: 700; }
+        .btn-toggle { background: #334155; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.85rem; }
         
-        .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; display: none; }
-        
-        @media (max-width: 900px) { 
-            .main-content { grid-template-columns: 1fr; }
-            .left-col { order: 1; display: flex; flex-direction: column; }
-            .right-col { order: 2; }
-            .video-player-container { order: 1; }
-            #transcript-card { order: 2; margin-top: 1.5rem; }
-            #download-card { order: 3; margin-top: 1.5rem; }
-        }
+        .post-list { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: 1rem; overflow: hidden; margin-top: 1rem; table-layout: fixed; }
+        .post-list td, .post-list th { padding: 18px 20px; text-align: left; border-bottom: 1px solid var(--border); }
+        .col-no { width: 200px; text-align: center; color: var(--text-dim); }
 
-        .video-player-container { 
-            position: relative; width: 90%; max-width: 560px; margin: 0 auto 1.5rem auto; 
-            padding-bottom: 50.625%; border-radius: 1rem; overflow: hidden; background: black; border: 1px solid var(--border);
-        }
+        .admin-table { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: 10px; overflow: hidden; table-layout: fixed; }
+        .admin-table th, .admin-table td { border-bottom: 1px solid var(--border); padding: 12px 15px; text-align: left; font-size: 0.85rem; word-break: break-all; }
+        @media (min-aspect-ratio: 1/1) { .col-link { width: 10%; } .col-title-db { width: 30%; } .col-summary-db { width: 50%; } .col-view { width: 10%; } }
+        @media (max-aspect-ratio: 1/1) { .col-summary-db { display: none; } .col-link { width: 25%; } .col-title-db { width: 55%; } .col-view { width: 20%; } }
+
+        #result-area { display: none; gap: 2rem; width: 100%; margin-top: 2rem; }
+        @media (min-aspect-ratio: 1/1) { #result-area { grid-template-columns: 1fr 1fr; } }
+        @media (max-aspect-ratio: 1/1) { #result-area { grid-template-columns: 1fr; } }
+        .video-player-container { position: relative; width: 100%; padding-bottom: 56.25%; border-radius: 1rem; overflow: hidden; background: black; border: 1px solid var(--border); }
         .video-player-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; }
         
-        .transcript-container { margin-top: 1rem; max-height: 400px; overflow-y: auto; display: none; white-space: pre-wrap; background: #0f172a; padding: 1rem; }
-        .download-list { margin-top: 1rem; max-height: 300px; overflow-y: auto; display: none; }
-        
-        #status-area { text-align: center; padding: 1rem; display: none; }
-        .loader { border: 4px solid rgba(239, 68, 68, 0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: inline-block; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* Admin UI */
-        .admin-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); display: none; flex-direction: column; z-index: 2000; overflow: hidden; }
-        .admin-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: var(--card-bg); border-bottom: 1px solid var(--border); }
+        .auth-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--card-bg); padding: 2rem; border-radius: 1rem; width: 100%; max-width: 400px; border: 1px solid var(--border); }
+        .admin-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); display: none; flex-direction: column; z-index: 2000; }
         .admin-layout { display: flex; flex: 1; overflow: hidden; }
-        .admin-sidebar { width: 220px; background: var(--card-bg); border-right: 1px solid var(--border); padding: 1.5rem; display: flex; flex-direction: column; gap: 10px; }
-        .admin-sidebar button { background: transparent; color: var(--text-main); border: 1px solid var(--border); padding: 12px; text-align: left; border-radius: 8px; font-size: 0.95rem; cursor: pointer; }
-        .admin-sidebar button.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .admin-sidebar { width: 220px; border-right: 1px solid var(--border); padding: 1.5rem; display: flex; flex-direction: column; gap: 10px; }
+        .admin-sidebar button { background: transparent; color: var(--text-main); border: 1px solid var(--border); padding: 12px; text-align: left; border-radius: 8px; cursor: pointer; }
+        .admin-sidebar button.active { background: var(--accent); color: white; }
         .admin-content { flex: 1; padding: 2rem; overflow-y: auto; background: #0f172a; }
-        .admin-table { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: 10px; overflow: hidden; }
-        .admin-table th, .admin-table td { border-bottom: 1px solid var(--border); padding: 12px 15px; text-align: left; font-size: 0.85rem; }
-        .admin-table th { background: #1e293b; color: var(--accent); font-weight: 600; }
-        
-        .download-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-        .btn-sm { padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; border: none; background: var(--success); color: white; }
-        .btn-toggle { background: #334155; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; }
+        .loader { border: 4px solid rgba(239, 68, 68, 0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>📺 YouTube AI</h1>
-            <div class="user-menu" id="user-menu"></div>
-        </header>
+        <header><h1 style="cursor:pointer" onclick="location.reload()">📋 Bulletin Board for AI</h1><div id="user-menu"></div></header>
+        <nav class="nav-tabs"><div class="nav-tab active" id="tab-board" onclick="switchTab('board')">커뮤니티</div><div class="nav-tab" id="tab-tool" onclick="switchTab('tool')">요약 도구</div></nav>
+        
+        <div id="section-board" style="width:100%">
+            <div id="board-list-view">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;"><h2>📝 커뮤니티 게시판</h2><button onclick="openWriteForm()" class="btn-main" id="btn-write" style="display:none">글쓰기</button></div>
+                <table class="post-list"><thead><tr><th class="col-no">No.</th><th>제목</th></tr></thead><tbody id="post-list-body"></tbody></table>
+            </div>
+            <div id="board-detail-view" style="display:none">
+                <button onclick="loadPosts()" class="btn-toggle" style="margin-bottom:1.5rem;">← 목록으로</button>
+                <div class="post-detail"><h2 id="view-title"></h2><div id="view-meta" style="margin-bottom:1.5rem;font-size:0.9rem;color:var(--text-dim);border-bottom:1px solid var(--border);padding-bottom:10px;"></div><div id="view-content" class="post-body"></div><div id="post-actions" style="margin-top:2rem;display:flex;gap:10px;"></div><div style="margin-top:3rem;"><h3>댓글</h3><div id="comment-list"></div><div id="comment-form-area" style="display:none;margin-top:1.5rem;background:#0f172a;padding:1.5rem;border-radius:1rem;border:1px solid var(--border);"><textarea id="new-comment" style="width:100%;background:transparent;border:none;color:white;padding:5px;outline:none;" rows="3" placeholder="댓글을 남겨주세요."></textarea><div style="text-align:right"><button onclick="submitComment()" class="btn-main">등록</button></div></div></div></div>
+            </div>
+            <div id="board-write-view" style="display:none"><input type="text" id="post-title" placeholder="제목" style="width:100%;padding:1rem;margin-bottom:1rem;background:#0f172a;border:1px solid var(--border);color:white;border-radius:0.5rem;font-size:1.2rem;"><div id="editor-container" style="height:400px;background:#0f172a;color:white;"></div><div style="margin-top:1.5rem;display:flex;gap:10px;"><button onclick="submitPost()" class="btn-main">등록</button><button onclick="loadPosts()" class="btn-toggle">취소</button></div></div>
+        </div>
 
-        <div class="auth-modal" id="auth-modal">
-            <div class="modal-content">
-                <h3 id="modal-title">로그인</h3>
-                <div id="auth-msg"></div>
-                <div id="register-fields" style="display: none;"><input type="text" id="auth-name" placeholder="이름"></div>
-                <input type="email" id="auth-email" placeholder="이메일">
-                <input type="password" id="auth-password" placeholder="비밀번호">
-                <button class="auth-btn" onclick="handleAuth()">확인</button>
-                <div style="margin: 1.5rem 0; position: relative; text-align: center;"><hr style="border: 0; border-top: 1px solid var(--border);"><span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--card-bg); padding: 0 10px; font-size: 0.8rem; color: var(--text-dim);">OR</span></div>
-                
-                <!-- 구글 버튼 영역 -->
-                <div id="google-login-btn-container">
-                    <div id="g_id_onload" 
-                         data-client_id="818619054130-32i1a8vcj21gc1i33mhrnsu84gnvm6h0.apps.googleusercontent.com" 
-                         data-callback="handleGoogleLogin"
-                         data-auto_prompt="false">
-                    </div>
-                    <div class="g_id_signin" data-type="standard" data-width="320"></div>
+        <div id="section-tool" style="display:none;width:100%">
+            <div style="display:flex;gap:12px;margin-bottom:2rem;background:var(--card-bg);padding:1.5rem;border-radius:1rem;border:1px solid var(--border);"><input type="text" id="url-input" placeholder="YouTube 링크" style="flex:1;background:#0f172a;border:1px solid var(--border);padding:1rem;color:white;border-radius:0.5rem"><button onclick="startAnalysis()" class="btn-main">분석 시작</button></div>
+            <div id="status-area" style="text-align:center;padding:1rem;display:none;"></div>
+            <div id="result-area">
+                <div class="left-col">
+                    <div id="video-container" class="video-player-container"></div>
+                    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;"><h2>📝 자막 전문</h2><button onclick="toggleCard('transcript-view', 'btn-sub')" id="btn-sub" class="btn-toggle">펼치기</button></div><div id="transcript-view" style="display:none;margin-top:1rem;max-height:300px;overflow-y:auto;white-space:pre-wrap;font-size:0.9rem;"></div></div>
+                    <div class="card" id="download-card" style="display:none"><div style="display:flex;justify-content:space-between;align-items:center;"><h2>📥 다운로드</h2><button onclick="toggleCard('download-list', 'btn-dl')" id="btn-dl" class="btn-toggle">펼치기</button></div><div id="download-list" style="display:none;margin-top:1rem;display:flex;flex-wrap:wrap;gap:10px;"></div></div>
                 </div>
-
-                <p class="switch-auth" id="auth-switch" onclick="switchAuth()">계정이 없으신가요? 회원가입</p>
-                <p class="switch-auth" onclick="closeAuth()" style="color: var(--danger);">닫기</p>
+                <div class="right-col"><div class="card"><h2>✨ AI 핵심 요약</h2><div id="summary-view" style="line-height:1.8;"></div></div></div>
             </div>
         </div>
 
-        <div class="admin-modal" id="admin-modal">
-            <div class="admin-header"><h2>⚙️ 관리자 대시보드</h2><button onclick="closeAdmin()" style="background:var(--danger); color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">닫기</button></div>
-            <div class="admin-layout">
-                <div class="admin-sidebar">
-                    <button id="tab-users" onclick="loadAdminTab('users')">👥 회원 관리</button>
-                    <button id="tab-videos" onclick="loadAdminTab('videos')">🎥 비디오 DB</button>
-                    <button id="tab-logs" onclick="loadAdminTab('logs')">📊 접속 로그</button>
-                    <button id="tab-blocks" onclick="loadAdminTab('blocks')">🛑 IP 차단</button>
-                </div>
-                <div class="admin-content" id="admin-content"></div>
-            </div>
-        </div>
-
-        <div class="input-section">
-            <input type="text" id="url-input" placeholder="YouTube 영상 링크를 입력하세요">
-            <button onclick="startAnalysis()" id="extract-btn" style="background: var(--accent); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer; font-weight: 700;">분석 시작</button>
-        </div>
-
-        <div id="status-area"></div>
-
-        <div id="result-area" class="main-content">
-            <div class="left-col">
-                <div class="video-player-container" id="video-container"></div>
-                <div class="card" id="transcript-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center;"><h2 style="margin:0; font-size: 1.2rem;">📝 자막 전문</h2><button onclick="toggleCard('transcript-view', 'toggle-btn-sub')" id="toggle-btn-sub" class="btn-toggle">펼치기</button></div>
-                    <div id="transcript-view" class="transcript-container"></div>
-                </div>
-                <div class="card" id="download-card" style="display: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;"><h2 style="margin:0; font-size: 1.2rem;">📥 다운로드 옵션</h2><button onclick="toggleCard('download-list', 'toggle-btn-dl')" id="toggle-btn-dl" class="btn-toggle">펼치기</button></div>
-                    <div id="download-list" class="download-list"></div>
-                </div>
-            </div>
-            <div class="right-col">
-                <div class="card">
-                    <h2 style="margin-top:0; font-size: 1.2rem; color: var(--accent);">✨ AI 핵심 요약</h2>
-                    <div id="summary-view" style="line-height: 1.8; color: #cbd5e1;"></div>
-                </div>
-            </div>
-        </div>
+        <div class="auth-modal" id="auth-modal"><div class="modal-content"><h3 id="modal-title">로그인</h3><input type="email" id="auth-email" placeholder="이메일" style="width:100%;margin-bottom:10px;padding:12px;background:#0f172a;color:white;border:1px solid var(--border);border-radius:8px;"><input type="password" id="auth-password" placeholder="비밀번호" style="width:100%;margin-bottom:10px;padding:12px;background:#0f172a;color:white;border:1px solid var(--border);border-radius:8px;"><div id="register-fields" style="display:none"><input type="text" id="auth-name" placeholder="이름" style="width:100%;margin-bottom:10px;padding:12px;background:#0f172a;color:white;border:1px solid var(--border);border-radius:8px;"></div><button class="btn-main" style="width:100%" onclick="handleAuth()">확인</button><div style="margin:15px 0;text-align:center;color:var(--text-dim)">OR</div><div id="google-login-btn"></div><p onclick="switchAuth()" style="cursor:pointer;text-align:center;margin-top:15px;font-size:0.9rem;">회원가입/로그인 전환</p><p onclick="closeAuth()" style="cursor:pointer;text-align:center;color:var(--danger);margin-top:10px;font-size:0.9rem;">닫기</p></div></div>
+        <div class="admin-modal" id="admin-modal"><div class="admin-header" style="padding:20px; background:var(--card-bg); display:flex; justify-content:space-between; border-bottom:1px solid var(--border);"><h2>⚙️ 관리자 대시보드</h2><button onclick="closeAdmin()" class="btn-toggle">닫기</button></div><div class="admin-layout"><div class="admin-sidebar"><button id="tab-users" onclick="loadAdminTab('users')">👥 회원 관리</button><button id="tab-videos" onclick="loadAdminTab('videos')">🎥 비디오 DB</button><button id="tab-logs" onclick="loadAdminTab('logs')">📊 접속 로그</button><button id="tab-blocks" onclick="loadAdminTab('blocks')">🛑 IP 차단</button></div><div class="admin-content" id="admin-content"></div></div></div>
     </div>
 
     <script>
         const API_BASE = "https://tubeapi.tor-ai.com";
-        let currentAuthMode = 'login';
-        
-        function setAuthMsg(text, type) {
-            const msgEl = document.getElementById('auth-msg');
-            msgEl.innerText = text;
-            msgEl.className = type === 'error' ? 'msg-error' : 'msg-success';
-            msgEl.style.display = 'block';
-        }
+        const GOOGLE_CLIENT_ID = "818619054130-32i1a8vcj21gc1i33mhrnsu84gnvm6h0.apps.googleusercontent.com";
+        let quill = null, currentPostId = null, replyToId = null, editingData = null;
+
+        function formatDate(s) { const d = new Date(s); return `${String(d.getFullYear()).slice(-2)}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`; }
 
         function updateUI() {
             const user = JSON.parse(localStorage.getItem('user'));
             const menu = document.getElementById('user-menu');
+            const btnWrite = document.getElementById('btn-write');
+            const commentArea = document.getElementById('comment-form-area');
             if (user) {
-                // 로그인 상태면 구글 버튼 영역 삭제 (팝업 방지)
-                const gBtn = document.getElementById('google-login-btn-container');
-                if(gBtn) gBtn.innerHTML = '';
-
-                let adminBtn = user.level === 'admin' ? `<button onclick="openAdmin()" style="background:var(--success); color:white; border:none; padding: 5px 15px; border-radius: 5px; cursor:pointer; font-weight:600; margin-left:10px;">관리자</button>` : '';
-                
-                // 데이터 필드명 picture와 profile_pic 모두 지원 및 no-referrer 정책
-                const picUrl = user.picture || user.profile_pic;
-                
-                menu.innerHTML = `
-                    <div class="user-profile">
-                        ${picUrl ? `<img src="${picUrl}" referrerpolicy="no-referrer" style="width:32px; height:32px; border-radius:50%; object-fit:cover;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random'">` : '<div style="width:32px; height:32px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px;">👤</div>'}
-                        <span class="user-name">${user.name}님</span>
-                        ${adminBtn}
-                        <button onclick="logout()" style="background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:0.85rem; margin-left:10px;">로그아웃</button>
-                    </div>
-                `;
+                let ab = user.level === 'admin' ? `<button onclick="openAdmin()" style="background:var(--success); color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer; margin-left:10px;">관리자</button>` : '';
+                menu.innerHTML = `<div class="user-profile"><span>${user.name}님</span>${ab}<button onclick="logout()" style="margin-left:10px;background:transparent;border:none;color:var(--text-dim);cursor:pointer">로그아웃</button></div>`;
+                if(btnWrite) btnWrite.style.display = user.level!=='pending'?'block':'none';
+                if(commentArea) commentArea.style.display = user.level!=='pending'?'block':'none';
             } else {
-                menu.innerHTML = `<button onclick="openAuth('login')" style="background:transparent; color:white; border:none; cursor:pointer;">로그인</button><button onclick="openAuth('register')" style="background:var(--accent); color:white; border:none; padding: 5px 15px; border-radius: 5px; cursor:pointer; font-weight:600;">회원가입</button>`;
+                menu.innerHTML = `<button onclick="openAuth('login')" style="background:transparent;color:white;border:none;cursor:pointer">로그인</button><button onclick="openAuth('register')" class="btn-main" style="margin-left:10px">회원가입</button>`;
+                if(btnWrite) btnWrite.style.display = 'none';
+                if(commentArea) commentArea.style.display = 'none';
             }
         }
-        updateUI();
 
-        function openAuth(mode) {
-            currentAuthMode = mode;
-            document.getElementById('auth-modal').style.display = 'flex';
-            document.getElementById('modal-title').innerText = mode === 'login' ? '로그인' : '회원가입';
-            document.getElementById('register-fields').style.display = mode === 'login' ? 'none' : 'block';
-            document.getElementById('auth-msg').style.display = 'none';
+        async function handleGoogleLogin(r) {
+            const resp = await fetch(`${API_BASE}/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: r.credential }) });
+            const d = await resp.json();
+            if (resp.ok) { localStorage.setItem('token', d.access_token); localStorage.setItem('user', JSON.stringify(d.user)); location.reload(); }
         }
-        function closeAuth() { document.getElementById('auth-modal').style.display = 'none'; }
-        function switchAuth() { openAuth(currentAuthMode === 'login' ? 'register' : 'login'); }
+        function initGoogleSSO() { if (window.google) { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleLogin }); google.accounts.id.renderButton(document.getElementById("google-login-btn"), { theme: "outline", size: "large", width: 320 }); } }
+        window.onload = () => { updateUI(); loadPosts(); setTimeout(initGoogleSSO, 500); };
 
-        async function handleAuth() {
-            const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-password').value;
-            const name = document.getElementById('auth-name').value;
+        function switchTab(t) { document.querySelectorAll('.nav-tab').forEach(x => x.classList.remove('active')); document.getElementById(`tab-${t}`).classList.add('active'); document.getElementById('section-board').style.display = t === 'board' ? 'block' : 'none'; document.getElementById('section-tool').style.display = t === 'tool' ? 'block' : 'none'; if(t==='board') loadPosts(); }
+
+        async function loadPosts() {
+            document.getElementById('board-list-view').style.display='block'; document.getElementById('board-detail-view').style.display='none'; document.getElementById('board-write-view').style.display='none';
             try {
-                const resp = await fetch(`${API_BASE}${currentAuthMode === 'login' ? '/login' : '/register'}`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, name })
-                });
-                const data = await resp.json();
-                if (resp.ok) {
-                    if (currentAuthMode === 'login') {
-                        localStorage.setItem('token', data.access_token);
-                        localStorage.setItem('user', JSON.stringify(data.user));
-                        location.reload();
-                    } else { openAuth('login'); }
-                } else { setAuthMsg(data.detail, "error"); }
-            } catch (e) { setAuthMsg("에러", "error"); }
+                const posts = await (await fetch(`${API_BASE}/posts`)).json();
+                document.getElementById('post-list-body').innerHTML = posts.map(p => `<tr onclick='viewPost(${JSON.stringify(p).replace(/'/g, "&apos;")})'><td class="col-no">${p.id}</td><td style="font-weight:600">${p.title}</td></tr>`).join('');
+            } catch(e) {}
         }
 
-        async function handleGoogleLogin(response) {
-            try {
-                const resp = await fetch(`${API_BASE}/auth/google`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: response.credential })
-                });
-                const data = await resp.json();
-                if (resp.ok) { 
-                    localStorage.setItem('token', data.access_token); 
-                    localStorage.setItem('user', JSON.stringify(data.user)); 
-                    location.reload(); 
-                }
-            } catch (e) { alert("연결 오류"); }
+        async function viewPost(p) {
+            currentPostId = p.id; const data = await (await fetch(`${API_BASE}/posts/${p.id}`)).json();
+            document.getElementById('board-list-view').style.display='none'; document.getElementById('board-detail-view').style.display='block';
+            document.getElementById('view-title').innerText = data.post.title; document.getElementById('view-content').innerHTML = data.post.content;
+            const user = JSON.parse(localStorage.getItem('user')), isPriv = user && (user.level==='admin' || user.level==='user2'), meta = document.getElementById('view-meta');
+            if (isPriv) {
+                let ipStr = (user.level === 'admin' && data.post.author_ip) ? ` | IP: ${data.post.author_ip}` : '';
+                meta.innerHTML = `<div>작성자: <strong>${data.post.author_name}</strong>${ipStr}</div><div>날짜: ${formatDate(data.post.created_at)}</div>`;
+                meta.style.display = 'flex';
+            } else { meta.style.display = 'none'; }
+            const ac = document.getElementById('post-actions'); ac.innerHTML = '';
+            if (user && (user.email === data.post.author_email || user.level === 'admin')) {
+                const eb = document.createElement('button'); eb.className='btn-toggle'; eb.innerText='수정'; eb.onclick=()=>openEditForm(data.post); ac.appendChild(eb);
+                const db = document.createElement('button'); db.className='btn-toggle'; db.style.color='var(--danger)'; db.innerText='삭제'; db.onclick=()=>deletePost(data.post.id); ac.appendChild(db);
+            }
+            renderComments(data.comments); updateUI();
         }
+
+        function openWriteForm() { 
+            document.getElementById('board-list-view').style.display='none'; document.getElementById('board-detail-view').style.display='none'; document.getElementById('board-write-view').style.display='block';
+            if(!quill) quill = new Quill('#editor-container', { theme: 'snow', modules: { toolbar: [['bold', 'italic', 'underline'], ['image']] } });
+            quill.root.innerHTML = ''; document.getElementById('post-title').value = ''; editingData = null;
+        }
+        function openEditForm(p) { openWriteForm(); quill.root.innerHTML = p.content; document.getElementById('post-title').value = p.title; editingData = p; }
+        async function submitPost() {
+            const t = document.getElementById('post-title').value, c = quill.root.innerHTML; if(!t || quill.getText().trim()==='') return alert("내용 입력!");
+            const m = editingData ? 'PUT' : 'POST', url = editingData ? `${API_BASE}/posts/${editingData.id}` : `${API_BASE}/posts`;
+            const resp = await fetch(url, { method: m, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify({ title:t, content:c }) });
+            if(resp.ok) { alert("완료"); loadPosts(); }
+        }
+        async function deletePost(id) { if(!confirm("삭제?")) return; await fetch(`${API_BASE}/posts/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }); loadPosts(); }
+
+        function renderComments(cms) {
+            const list = document.getElementById('comment-list'), user = JSON.parse(localStorage.getItem('user')), isPriv = user && (user.level==='admin' || user.level==='user2');
+            list.innerHTML = cms.filter(c => !c.parent_id).map(root => {
+                const children = cms.filter(c => c.parent_id === root.id);
+                let ipStr = (user && user.level === 'admin' && root.author_ip) ? ` | IP: ${root.author_ip}` : '';
+                let meta = isPriv ? `<div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:5px;"><strong>${root.author_name}</strong>${ipStr} | ${formatDate(root.created_at)}</div>` : '';
+                let h = `<div class="comment-item">${meta}<div>${root.content}</div><div style="margin-top:5px;display:flex;gap:10px;font-size:0.8rem;color:var(--accent);"><span onclick="setReply(${root.id}, '${root.author_name}')" style="cursor:pointer">답글</span>${(user&&(user.email===root.author_email||user.level==='admin'))?`<span onclick="deleteComment(${root.id})" style="cursor:pointer;color:var(--danger)">삭제</span>`:''}</div></div>`;
+                children.forEach(child => {
+                    let cip = (user && user.level === 'admin' && child.author_ip) ? ` | IP: ${child.author_ip}` : '';
+                    let cmeta = isPriv ? `<div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:5px;"><strong>${child.author_name}</strong>${cip} | ${formatDate(child.created_at)}</div>` : '';
+                    h += `<div class="comment-item" style="margin-left:30px; border-left:2px solid var(--border); padding-left:15px;">${cmeta}<div>${child.content}</div>${(user&&(user.email===child.author_email||user.level==='admin'))?`<span onclick="deleteComment(${child.id})" style="cursor:pointer;color:var(--danger)">삭제</span>`:''}</div>`;
+                }); return h;
+            }).join('');
+        }
+        function setReply(id, name) { replyToId = id; const i = document.getElementById('new-comment'); i.placeholder = `@${name}님께 답글...`; i.focus(); }
+        async function submitComment() {
+            const c = document.getElementById('new-comment').value; if(!c) return;
+            await fetch(`${API_BASE}/posts/${currentPostId}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify({ content:c, parent_id: replyToId }) });
+            document.getElementById('new-comment').value = ''; replyToId = null;
+            const p = await (await fetch(`${API_BASE}/posts/${currentPostId}`)).json(); renderComments(p.comments);
+        }
+        async function deleteComment(id) { if(!confirm("삭제?")) return; await fetch(`${API_BASE}/comments/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }); const p = await (await fetch(`${API_BASE}/posts/${currentPostId}`)).json(); renderComments(p.comments); }
 
         function logout() { localStorage.clear(); location.reload(); }
+        function openAuth(m) { document.getElementById('auth-modal').style.display = 'flex'; document.getElementById('modal-title').innerText = m==='login'?'로그인':'회원가입'; document.getElementById('register-fields').style.display = m==='login'?'none':'block'; initGoogleSSO(); }
+        function closeAuth() { document.getElementById('auth-modal').style.display = 'none'; }
+        function switchAuth() { openAuth(document.getElementById('modal-title').innerText==='로그인'?'register':'login'); }
+        async function handleAuth() {
+            const e = document.getElementById('auth-email').value, p = document.getElementById('auth-password').value, n = document.getElementById('auth-name').value, isL = document.getElementById('modal-title').innerText === '로그인';
+            const resp = await fetch(`${API_BASE}${isL ? '/login' : '/register'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email:e, password:p, name:n }) });
+            const d = await resp.json(); if(resp.ok) { if(isL) { localStorage.setItem('token', d.access_token); localStorage.setItem('user', JSON.stringify(d.user)); location.reload(); } else { alert("성공"); openAuth('login'); } } else { alert(d.detail); }
+        }
 
-        // --- 관리자 ---
         function openAdmin() { document.getElementById('admin-modal').style.display = 'flex'; loadAdminTab('users'); }
         function closeAdmin() { document.getElementById('admin-modal').style.display = 'none'; }
-        async function fetchAdminData(endpoint) {
-            const resp = await fetch(`${API_BASE}${endpoint}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
-            return await resp.json();
-        }
-        async function loadAdminTab(tab) {
-            const content = document.getElementById('admin-content');
-            content.innerHTML = '로딩 중...';
-            if (tab === 'users') {
-                const data = await fetchAdminData('/admin/users');
-                let html = '<h2>👥 회원 관리</h2><table class="admin-table"><tr><th>ID</th><th>이름</th><th>이메일</th><th>레벨</th></tr>';
-                data.forEach(u => html += `<tr><td>${u.id}</td><td>${u.name}</td><td>${u.email}</td><td><select onchange="updateUserLevel('${u.email}', this.value)"><option value="admin" ${u.level==='admin'?'selected':''}>관리자</option><option value="user2" ${u.level==='user2'?'selected':''}>일반2</option><option value="user" ${u.level==='user'?'selected':''}>일반</option><option value="pending" ${u.level==='pending'?'selected':''}>보류</option></select></td></tr>`);
-                content.innerHTML = html + '</table>';
-            } else if (tab === 'videos') {
-                const data = await fetchAdminData('/admin/videos');
-                let html = '<h2>🎥 비디오 DB</h2><table class="admin-table"><tr><th style="width:100px;">링크</th><th style="width:150px;">제목</th><th>요약 내용</th><th style="width:120px;">사용자</th><th style="width:60px;">조회</th></tr>';
-                data.forEach(v => {
-                    html += `<tr>
-                        <td><a href="https://youtube.com/watch?v=${v.video_id}" target="_blank" style="color:var(--accent)">${v.video_id}</a></td>
-                        <td>${v.title}</td>
-                        <td><div style="max-height:100px; overflow-y:auto; font-size:0.75rem; white-space:pre-wrap; border:1px solid #334155; padding:8px; background:#0f172a; line-height:1.4;">${v.summary || '요약 데이터 없음'}</div></td>
-                        <td><small>${v.userId}</small></td>
-                        <td>${v.view_count}회</td>
-                    </tr>`;
-                });
-                content.innerHTML = html + '</table>';
-            } else if (tab === 'logs') {
-                const data = await fetchAdminData('/admin/logs');
-                let html = '<h2>📊 로그</h2><table class="admin-table"><tr><th>IP</th><th>경로</th><th>시간</th></tr>';
-                data.forEach(l => html += `<tr><td>${l.ip}</td><td>${l.endpoint}</td><td>${l.created_at}</td></tr>`);
-                content.innerHTML = html + '</table>';
-            } else if (tab === 'blocks') {
-                const data = await fetchAdminData('/admin/blocked_ips');
-                let html = '<h2>🛑 IP 차단</h2><table class="admin-table"><tr><th>IP</th><th>사유</th><th>관리</th></tr>';
-                data.forEach(b => html += `<tr><td>${b.ip}</td><td>${b.reason}</td><td><button onclick="unblockIp('${b.ip}')">해제</button></td></tr>`);
-                content.innerHTML = html + '</table>';
-            }
-        }
-        async function updateUserLevel(email, level) {
-            await fetch(`${API_BASE}/admin/update_user_level`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, level }) });
-            alert("완료");
-        }
-
-        function toggleCard(contentId, btnId) {
-            const el = document.getElementById(contentId);
-            const btn = document.getElementById(btnId);
-            const isVisible = el.style.display === 'block';
-            el.style.display = isVisible ? 'none' : 'block';
-            btn.innerText = isVisible ? '펼치기' : '접기';
-        }
-
-        async function loadDownloadOptions(url) {
-            const card = document.getElementById('download-card');
-            const list = document.getElementById('download-list');
-            const btn = document.getElementById('toggle-btn-dl');
-            list.innerHTML = '포맷 정보를 불러오는 중...';
-            card.style.display = 'block';
-            list.style.display = 'none';
-            btn.innerText = '펼치기';
+        async function loadAdminTab(t) {
+            const content = document.getElementById('admin-content'); content.innerHTML = '<div class="loader"></div>';
+            document.querySelectorAll('.admin-sidebar button').forEach(b => b.classList.remove('active')); document.getElementById(`tab-${t}`).classList.add('active');
             try {
-                const resp = await fetch(`${API_BASE}/video-formats?url=${encodeURIComponent(url)}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
-                const data = await resp.json();
-                if (resp.ok) {
-                    let html = '';
-                    data.formats.forEach(f => {
-                        html += `<div class="download-item"><span>[${f.type.toUpperCase()}] ${f.resolution} (${f.ext}) ${f.note}</span><button class="btn-sm" onclick="downloadFile('${url}', '${f.format_id}')">다운로드</button></div>`;
-                    });
-                    list.innerHTML = html;
-                } else { list.innerHTML = '권한 없음'; }
-            } catch (e) { list.innerHTML = '에러'; }
+                const data = await (await fetch(`${API_BASE}/admin/${t}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })).json();
+                if (t === 'users') { content.innerHTML = '<h2>회원 관리</h2><table class="admin-table"><thead><tr><th>이름</th><th>이메일</th><th>레벨</th></tr></thead><tbody>' + data.map(u => `<tr><td>${u.name}</td><td>${u.email}</td><td><select onchange="updateLevel('${u.email}', this.value)"><option value="admin" ${u.level==='admin'?'selected':''}>관리자</option><option value="user2" ${u.level==='user2'?'selected':''}>일반2</option><option value="user" ${u.level==='user'?'selected':''}>일반</option><option value="pending" ${u.level==='pending'?'selected':''}>보류</option></select></td></tr>`).join('') + '</tbody></table>'; }
+                else if (t === 'videos') { content.innerHTML = '<h2>비디오 DB</h2><table class="admin-table"><thead><tr><th class="col-link">ID</th><th class="col-title-db">제목</th><th class="col-summary-db">요약</th><th class="col-view">조회</th></tr></thead><tbody>' + data.map(v => `<tr><td class="col-link"><a href="https://youtube.com/watch?v=${v.video_id}" target="_blank" style="color:var(--accent)">${v.video_id}</a></td><td class="col-title-db">${v.title}</td><td class="col-summary-db"><div style="max-height:80px;overflow-y:auto;">${v.summary || ''}</div></td><td class="col-view">${v.view_count}회</td></tr>`).join('') + '</tbody></table>'; }
+                else if (t === 'logs') { content.innerHTML = '<h2>접속 로그</h2><table class="admin-table"><thead><tr><th>IP</th><th>경로</th><th>시간</th></tr></thead><tbody>' + data.map(l => `<tr><td>${l.ip}</td><td>${l.endpoint} (${l.method})</td><td>${l.created_at.replace('T',' ')}</td></tr>`).join('') + '</tbody></table>'; }
+                else if (t === 'blocks') { content.innerHTML = '<h2>IP 차단</h2><div style="margin-bottom:20px;display:flex;gap:10px;"><input id="b-ip" placeholder="IP" style="padding:10px;background:#0f172a;color:white;border:1px solid var(--border);"><input id="b-r" placeholder="사유" style="padding:10px;background:#0f172a;color:white;border:1px solid var(--border);"><button onclick="doBlock()" class="btn-main">차단</button></div><table class="admin-table"><thead><tr><th>IP</th><th>사유</th><th>해제</th></tr></thead><tbody>' + data.map(b => `<tr><td>${b.ip}</td><td>${b.reason}</td><td><button onclick="unBlock('${b.ip}')" class="btn-toggle" style="background:var(--danger)">해제</button></td></tr>`).join('') + '</tbody></table>'; }
+            } catch(e) { content.innerHTML = "오류 발생"; }
         }
+        async function updateLevel(e, l) { await fetch(`${API_BASE}/admin/update_user_level`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ email:e, level:l }) }); alert("완료"); }
+        async function doBlock() { const ip = document.getElementById('b-ip').value, r = document.getElementById('b-r').value; await fetch(`${API_BASE}/admin/block_ip`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ ip, reason: r }) }); loadAdminTab('blocks'); }
+        async function unBlock(ip) { await fetch(`${API_BASE}/admin/block_ip/${ip}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }); loadAdminTab('blocks'); }
 
-        async function downloadFile(url, format_id) {
-            const btn = event.target;
-            const originalText = btn.innerText;
-            btn.innerText = '⏳ 수신 중...';
-            btn.disabled = true;
-            try {
-                const response = await fetch(`${API_BASE}/download-file?url=${encodeURIComponent(url)}&format_id=${format_id}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
-                if (!response.ok) throw new Error("실패");
-                const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = "download.mp4";
-                if (contentDisposition) {
-                    const match = contentDisposition.match(/filename\*=UTF-8''(.+)/);
-                    if (match) filename = decodeURIComponent(match[1]);
-                }
-                const reader = response.body.getReader();
-                const chunks = [];
-                let receivedLength = 0;
-                while(true) {
-                    const {done, value} = await reader.read();
-                    if (done) break;
-                    chunks.push(value);
-                    receivedLength += value.length;
-                    btn.innerText = `⏳ ${(receivedLength / 1024 / 1024).toFixed(1)}MB`;
-                }
-                const blob = new Blob(chunks);
-                const dUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = dUrl; a.download = filename; a.click();
-                btn.innerText = '✅ 완료';
-            } catch (e) { alert(e.message); btn.innerText = '❌ 실패'; }
-            finally { setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 2000); }
-        }
+        function toggleCard(id, btnId) { const el = document.getElementById(id), btn = document.getElementById(btnId); const isNone = el.style.display === 'none'; el.style.display = isNone ? 'block' : 'none'; btn.innerText = isNone ? '접기' : '펼치기'; }
 
         async function startAnalysis() {
-            const url = document.getElementById('url-input').value.trim();
-            if (!url) return;
-            document.getElementById('result-area').style.display = 'none';
-            document.getElementById('download-card').style.display = 'none';
-            document.getElementById('status-area').style.display = 'block';
-            document.getElementById('status-area').innerHTML = '<div class="loader"></div> <span id="status-text">시작 중...</span>';
+            const url = document.getElementById('url-input').value.trim(); if(!url) return;
+            const resArea = document.getElementById('result-area'), sArea = document.getElementById('status-area'), sm = document.getElementById('summary-view'), tr = document.getElementById('transcript-view'), vc = document.getElementById('video-container');
+            resArea.style.display = 'none'; sArea.style.display = 'block'; sArea.innerHTML = '<div class="loader"></div> <span>분석 중...</span>';
+            sm.innerHTML = ''; tr.innerText = ''; vc.innerHTML = '';
             try {
-                const response = await fetch(`${API_BASE}/smart-subtitles`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify({ url }) });
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = ""; let accumulatedSummary = "";
-                document.getElementById('result-area').style.display = 'grid';
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
+                const resp = await fetch(`${API_BASE}/smart-subtitles`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify({ url }) });
+                const reader = resp.body.getReader(), decoder = new TextDecoder(); 
+                let buffer = "", acc = ""; resArea.style.display = 'grid';
+                while(true) {
+                    const {done, value} = await reader.read(); if(done) break;
                     buffer += decoder.decode(value, { stream: true });
-                    let parts = buffer.split("\n\n"); buffer = parts.pop();
-                    for (const line of parts) {
-                        if (!line.startsWith("data: ")) continue;
-                        const data = JSON.parse(line.substring(6));
-                        if (data.type === 'video_id') { document.getElementById('video-container').innerHTML = `<iframe src="https://www.youtube.com/embed/${data.value}" frameborder="0" allowfullscreen></iframe>`; }
-                        else if (data.type === 'status') { document.getElementById('status-text').innerText = data.value; }
-                        else if (data.type === 'transcript') { document.getElementById('transcript-view').innerText = data.value; }
-                        else if (data.type === 'chunk') { accumulatedSummary += data.value; document.getElementById('summary-view').innerHTML = marked.parse(accumulatedSummary); }
-                        else if (data.type === 'summary_full') { accumulatedSummary = data.value; document.getElementById('summary-view').innerHTML = marked.parse(accumulatedSummary); }
-                        else if (data.type === 'can_download') { loadDownloadOptions(data.url); }
-                        else if (data.type === 'done') { document.getElementById('status-area').style.display = 'none'; }
+                    const parts = buffer.split('\n\n'); buffer = parts.pop();
+                    for (const p of parts) {
+                        if (p.startsWith('data: ')) {
+                            try {
+                                const d = JSON.parse(p.substring(6));
+                                if (d.type === 'video_id') vc.innerHTML = `<iframe src="https://www.youtube.com/embed/${d.value}" frameborder="0" allowfullscreen></iframe>`;
+                                else if (d.type === 'chunk') { acc += d.value; sm.innerHTML = marked.parse(acc); }
+                                else if (d.type === 'transcript') tr.innerText = d.value;
+                                else if (d.type === 'can_download') loadDL(d.url);
+                                else if (d.type === 'done') sArea.style.display = 'none';
+                            } catch(e) {}
+                        }
                     }
                 }
-            } catch (e) { }
+            } catch(e) { sArea.innerHTML = "오류 발생"; }
+        }
+        async function loadDL(url) {
+            document.getElementById('download-card').style.display = 'block';
+            const dl = await (await fetch(`${API_BASE}/video-formats?url=${encodeURIComponent(url)}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })).json();
+            document.getElementById('download-list').innerHTML = dl.formats.map(f => `<button class="btn-toggle" onclick="downF('${url}', '${f.format_id}')">${f.resolution}</button>`).join('');
+        }
+        async function downF(url, fid) {
+            const resp = await fetch(`${API_BASE}/download-file?url=${encodeURIComponent(url)}&format_id=${fid}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+            const blob = await resp.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "download"; a.click();
         }
     </script>
 </body>
