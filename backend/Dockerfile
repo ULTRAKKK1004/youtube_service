@@ -1,9 +1,11 @@
 # Python 3.11 슬림 이미지를 사용합니다.
 FROM python:3.11-slim
 
-# 필요한 시스템 패키지(ffmpeg 등)를 설치합니다.
-RUN apt-get update && apt-get install -y 
-    ffmpeg 
+# 필요한 시스템 패키지(ffmpeg, nodejs 등)를 설치합니다.
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    nodejs \
+    npm \
     && rm -rf /lib/apt/lists/*
 
 # 작업 디렉토리 설정

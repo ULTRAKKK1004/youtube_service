@@ -67,6 +67,15 @@ async def get_privileged_user(request: Request):
 # --- DB 초기화 및 미들웨어 ---
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
+# WebDAV 메서드 등 지원되지 않는 메서드 필터링
+INVALID_METHODS = {"PROPFIND", "PROPPATCH", "MKCOL", "COPY", "MOVE", "LOCK", "UNLOCK", "REPORT", "SEARCH"}
+
+@app.middleware("http")
+async def filter_invalid_methods(request: Request, call_next):
+    if request.method in INVALID_METHODS:
+        return JSONResponse(status_code=405, content={"detail": "Method Not Allowed"})
+    return await call_next(request)
+
 @app.on_event("startup")
 async def startup_event():
     async with aiosqlite.connect(DB_PATH) as db:
@@ -81,6 +90,7 @@ async def startup_event():
 @app.middleware("http")
 async def block_ip_and_log(request: Request, call_next):
     if request.method == "OPTIONS": return await call_next(request)
+    if request.method in INVALID_METHODS: return JSONResponse(status_code=405, content={"detail": "Method Not Allowed"})
     try:
         async with aiosqlite.connect(DB_PATH) as db:
             async with db.execute("SELECT id FROM ip_blocks WHERE ip = ?", (request.client.host,)) as cursor:
@@ -264,7 +274,7 @@ async def smart_sub(request: VideoRequest, fastapi_request: Request):
                     if u and u["level"] in ['admin', 'user2']: yield f"data: {json.dumps({'type': 'can_download', 'url': url})}\n\n"
                     yield f"data: {json.dumps({'type': 'done'})}\n\n"; return
         try:
-            info = await asyncio.get_event_loop().run_in_executor(None, lambda: yt_dlp.YoutubeDL({'quiet': True}).extract_info(url, download=False))
+            info = await asyncio.get_event_loop().run_in_executor(None, lambda: yt_dlp.YoutubeDL({'quiet': True, 'extractor_args': {'--js-runtimes': 'node'}}).extract_info(url, download=False))
             vid = info.get('id'); yield f"data: {json.dumps({'type': 'video_id', 'value': vid})}\n\n"
         except: yield f"data: {json.dumps({'type': 'error', 'value': '분석 실패'})}\n\n"; return
         content = None
@@ -275,10 +285,14 @@ async def smart_sub(request: VideoRequest, fastapi_request: Request):
                     content = open(os.path.join(t, os.listdir(t)[0]), 'r', encoding='utf-8').read(); break
                 except: pass
         if not content: yield f"data: {json.dumps({'type': 'done'})}\n\n"; return
+        
+        # 자막 전송
+        yield f"data: {json.dumps({'type': 'transcript', 'value': content})}\n\n"
+        
         full = ""
         try:
             async with httpx.AsyncClient(timeout=300.0) as client:
-                async with client.stream("POST", llm_url, headers={'Authorization': f'Bearer {openwebui}'}, json={"model": model_name, "messages": [{"role": "user", "content": f"요약해줘: {content[:8000]}"}], "stream": True}) as response:
+                async with client.stream("POST", llm_url, headers={'Authorization': f'Bearer {openwebui}'}, json={"model": model_name, "messages": [{"role": "user", "content": f"{content[:]}"}], "stream": True}) as response:
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):
                             if "[DONE]" in line: break
